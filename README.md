@@ -37,6 +37,7 @@ We hypothesize that weekly solar energy output in La Pampa is primarily driven b
 
 The project is built as a **5-agent autonomous pipeline**. Each agent has a single responsibility and passes outputs to the next via Parquet files.
 
+```
 python pipeline.py
 │
 ├── [1] DataAgent          → Fetches real solar data from PVGIS ERA5
@@ -54,7 +55,7 @@ python pipeline.py
 │
 └── [5] DashboardAgent     → Streamlit interactive dashboard
 output: dashboard/app.py
-
+```
 ---
 
 ## 📊 Model Performance
@@ -127,7 +128,7 @@ python pipeline.py dashboard    # only rebuild dashboard
 ---
 
 ## 📁 Project Structure
-
+```
 SOLAR-PAMPA/
 ├── agents/
 │   ├── init.py              # BaseAgent abstract class
@@ -149,7 +150,7 @@ SOLAR-PAMPA/
 ├── requirements.txt             # Python dependencies
 ├── .env                         # API keys (never commit this)
 └── .gitignore
-
+```
 ---
 
 ## 🌐 Data Source
