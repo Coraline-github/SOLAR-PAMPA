@@ -1,159 +1,255 @@
-# ⚡SOLAR-PAMPA: Solar Output Logistics & Atmospheric Response - Prediction for la Pampa
+# ⚡ SOLAR-PAMPA
+## Solar Output Logistics & Atmospheric Response Prediction for La Pampa, Argentina
 
 ---
 
-### Project Overview
+## 🌍 Project Overview
 
-The intermittent nature of solar energy poses challenges for grid integration and energy market operations. This project, **SOLAR-PF (Solar Output Logistics & Atmospheric Response Prediction for the Pampa)**, aims to develop a predictive model for solar power generation in the arid and semi-arid regions of La Pampa, Argentina. By analyzing historical solar irradiance, cloud cover, and other meteorological data, we will forecast weekly solar energy output. This will demonstrate how data science can contribute to the optimization and stability of renewable energy grids, directly addressing a critical challenge in Argentina's energy transition.
+The intermittent nature of solar energy poses challenges for grid integration and energy market operations. **SOLAR-PAMPA** develops a predictive model for solar power generation in the arid and semi-arid regions of La Pampa, Argentina. By analyzing historical solar irradiance and meteorological data, the system forecasts weekly solar energy output through a fully autonomous multi-agent pipeline.
 
-### Specific Project Goals
+This project demonstrates how data science and software engineering can contribute to the optimization and stability of renewable energy grids — directly addressing a critical challenge in Argentina's energy transition.
 
-1.  **Meteorological & Solar Data Collection:** Gather historical solar irradiance and cloud cover data, along with other relevant meteorological parameters (e.g., temperature, humidity) specific to the La Pampa region.
-2.  **Feature Engineering:** Create physics-informed features from raw weather data that are highly correlated with solar power generation (e.g., clear-sky index, effective solar hours).
-3.  **Weekly Solar Output Forecasting:** Develop and evaluate time series forecasting models to predict weekly aggregate solar energy generation for the target region.
-4.  **Impact of Atmospheric Conditions:** Quantify the influence of key meteorological variables, particularly cloud cover, on solar energy production.
-5.  **Forecast Uncertainty Quantification:** Explore methods to provide not just point forecasts, but also uncertainty intervals around predictions, critical for grid operators.
+Solar and meteorological data is sourced from **PVGIS ERA5** (Photovoltaic Geographical Information System), developed by the **European Commission's Joint Research Centre**. ERA5 is the fifth generation ECMWF atmospheric reanalysis of global climate — one of the most comprehensive and scientifically validated meteorological datasets available, combining model data with worldwide observations into a globally complete dataset. It provides hourly estimates of atmospheric variables with full South America coverage, making it the most reliable freely available source for this region. Data spans **2018–2022** at hourly resolution, aggregated to weekly forecasts.
 
-### Hypothesis
-
-We hypothesize that weekly solar energy output in the La Pampa region is primarily driven by solar irradiance and cloud cover, with other meteorological factors playing a secondary role. We expect that incorporating physically relevant features derived from these weather variables will enable a robust time-series model to generate accurate weekly forecasts, which can then inform energy grid management and optimize solar farm operations by anticipating periods of high or low generation.
-
-### Target Audience Narrative
-
-This project is tailored for **Energy Sector Professionals, Academia (especially those in atmospheric physics or renewable energy research), and Government Agencies** involved in energy policy and grid management in Argentina and similar regions. It showcases advanced time-series forecasting, data integration from environmental sources, and a direct application of physics knowledge to a pressing challenge in renewable energy.
-
-### Key Features & Skills Demonstrated
-
-* **Environmental Data Handling:** Working with large datasets of meteorological and energy production data.
-* **Time Series Forecasting:** Applying various models (e.g., statistical, machine learning, or hybrid) for energy production prediction.
-* **Physics-Informed Feature Engineering:** Leveraging principles of solar radiation, atmospheric science, and local geography to create predictive features.
-* **Model Evaluation for Forecasts:** Using appropriate metrics (MAE, RMSE, MAPE) for time-series predictions.
-* **Domain-Specific Visualization:** Creating plots that effectively communicate solar irradiance patterns, cloud cover impact, and forecast accuracy.
-* **Contribution to Sustainability:** Addressing a critical challenge in integrating renewable energy into the grid.
-
-### Data Sources
-
-Given the specific focus on La Pampa, Argentina, acquiring precise historical solar irradiance and cloud cover data will be key. We'll outline two primary approaches:
-
-1.  **NREL National Solar Radiation Database (NSRDB):**
-    * **Source:** [https://www.nrel.gov/grid/solar-resource-data.html](https://www.nrel.gov/grid/solar-resource-data.html) (Look for the NSRDB data viewer/download tool)
-    * **Description:** The NSRDB provides high-resolution solar radiation and meteorological data for various locations globally, often derived from satellite imagery and ground measurements. While primarily for the US, they do have global coverage, and you can select coordinates relevant to La Pampa. It includes Global Horizontal Irradiance (GHI), Direct Normal Irradiance (DNI), Diffuse Horizontal Irradiance (DHI), temperature, wind speed, cloud cover, and more.
-    * **Why it's ideal:** This is the gold standard for solar resource data. Its comprehensive nature and scientific rigor align well with your physics background. Accessing data might require using their web interface or API.
-    * **Steps:** Go to the NSRDB viewer, navigate to a location in the desertic areas of La Pampa (e.g., approximate coordinates: -37.5, -66.5), and select the desired time period and variables for download.
-
-2.  **OpenWeatherMap API / Weatherbit API (or similar commercial/free weather APIs):**
-    * **Source:** [https://openweathermap.org/api](https://openweathermap.org/api) or [https://www.weatherbit.io/api](https://www.weatherbit.io/api)
-    * **Description:** These APIs provide historical weather data, including cloud cover, temperature, humidity, and sometimes solar radiation estimates, for specific geographic coordinates. Most have a free tier that allows for a certain number of historical data requests.
-    * **Why it's ideal:** Offers a practical way to collect localized weather data if high-resolution solar-specific data is hard to find directly for your precise location in La Pampa. You'll need to sign up for an API key.
-
-3.  **Local Meteorological Stations / Research Institutes (Stretch Goal / Alternative):**
-    * **Source:** Potentially contact local universities (e.g., Universidad Nacional de La Pampa), CONICET, or regional meteorological services in Argentina. They might have publicly available datasets or be willing to share for academic projects.
-    * **Why it's ideal:** Provides the most accurate and localized data, if accessible. This would demonstrate initiative and real-world data sourcing skills.
-
-## ⚠️ Data Source Notes
-
-### Why PVGIS instead of NSRDB?
-The original design used NREL's NSRDB API. During implementation we found:
-- `psm3-download` endpoint: **deprecated** (replaced by v3.2.2)
-- `psm3-2-2-download` endpoint: returns 404 for South America
-- `PSM4 (get_nsrdb_psm4_aggregated)`: **CONUS only**, no coverage for Argentina
-
-**Solution:** Switched to [PVGIS (EU Commission)](https://re.jrc.ec.europa.eu/pvg_tools/)
-- Uses ERA5 reanalysis data
-- Full South America coverage ✅
-- Free, no API key required ✅
-- Accessed via `pvlib.iotools.get_pvgis_hourly()`
-- Data range: 2005–2022
-
-### If NSRDB access is needed in future:
-- Register at https://developer.nrel.gov/signup/
-- Store key in `.env` as `NSRDB_API_KEY`
-- Note: domain migrating from `developer.nrel.gov` 
-  to `developer.nlr.gov` by April 30, 2026
-
-### Expected Outcomes & Deliverables
-
-* **Jupyter Notebooks:** Comprehensive documentation of data collection, preprocessing, feature engineering, modeling, and evaluation.
-* **Solar Energy Forecasting Model:** A trained model capable of predicting weekly solar energy output for La Pampa.
-* **Interactive Dashboard (Stretch Goal):** A dynamic dashboard visualizing historical solar production, weather variables, and weekly forecasts, along with forecast confidence intervals.
-* **Short Results Presentation:** A concise overview of the project, including the impact of weather on solar output and potential applications for grid management.
+> **Location:** La Pampa, Argentina | **Coordinates:** -37.5°, -66.5° | **Timezone:** America/Argentina/Buenos_Aires
 
 ---
 
-#### Resources for Interactive Dashboards & Visualization:
+## 🎯 Specific Project Goals
 
-* **Streamlit (Python-based):** Excellent for quick, interactive web apps.
-    * **Official Documentation:** [https://docs.streamlit.io/](https://docs.streamlit.io/)
-    * **YouTube Tutorial (by Data Professor):** Search for "Streamlit Tutorial for Beginners" on YouTube for comprehensive guides.
-    * **Ideas:** Showcase sensor trends, predicted failure points, and model performance metrics.
-* **Plotly Dash (Python-based):** More customizable for complex dashboards.
-    * **Official Documentation & Gallery:** [https://dash.plotly.com/](https://dash.plotly.com/)
-    * **YouTube Tutorial (by Traversy Media or Data Science Dojo):** Search for "Plotly Dash Tutorial" on YouTube.
-* **Folium / Geopandas:** For mapping and visualizing data spatially, if you integrate multiple locations.
+1. **Meteorological & Solar Data Collection:** Gather historical solar irradiance and meteorological data specific to the La Pampa region using real satellite-derived sources.
+2. **Feature Engineering:** Create physics-informed features from raw weather data that are highly correlated with solar power generation (clear-sky index, solar geometry, effective solar hours).
+3. **Weekly Solar Output Forecasting:** Develop and evaluate time series forecasting models to predict weekly aggregate solar energy generation.
+4. **Impact of Atmospheric Conditions:** Quantify the influence of key meteorological variables — particularly cloud cover — on solar energy production.
+5. **Forecast Uncertainty Quantification:** Provide not just point forecasts but uncertainty intervals around predictions, critical for grid operators.
 
-### 📁Project Structure
+---
+
+## 🔬 Hypothesis
+
+We hypothesize that weekly solar energy output in La Pampa is primarily driven by solar irradiance and seasonal patterns, with atmospheric conditions playing a secondary but measurable role. Incorporating physically relevant features derived from these variables enables a robust time-series model to generate accurate weekly forecasts that can inform energy grid management and optimize solar farm operations.
+
+**Result:** R² = 0.999, MAPE = 1.1% on held-out test data — hypothesis confirmed.
+
+---
+
+## 🏗️ Architecture — Multi-Agent Pipeline
+
+The project is built as a **5-agent autonomous pipeline**. Each agent has a single responsibility and passes outputs to the next via Parquet files.
+
+python pipeline.py
+│
+├── [1] DataAgent          → Fetches real solar data from PVGIS ERA5
+│         output: solar_raw_validated.parquet
+│
+├── [2] FeatureAgent       → Physics-informed features via pvlib
+│         output: features_weekly.parquet
+│
+├── [3] ModelingAgent      → XGBoost + future forecast
+│         output: xgboost_solar.pkl + predictions.parquet
+│                          + future_forecast.parquet
+│
+├── [4] EvaluationAgent    → Metrics + diagnostic plots
+│         output: metrics.json + reports/figures/
+│
+└── [5] DashboardAgent     → Streamlit interactive dashboard
+output: dashboard/app.py
+
+---
+
+## 📊 Model Performance
+
+| Metric | Value |
+|--------|-------|
+| R²     | 0.999 |
+| MAPE   | 1.1%  |
+| MAE    | 0.326 kWh/m² |
+| RMSE   | 0.442 kWh/m² |
+| Test weeks | 42 |
+| CI Coverage | 7.1% |
+
+---
+
+## 🚀 How To Run
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/Coraline-github/SOLAR-PAMPA.git
+cd SOLAR-PAMPA
 ```
-SOLAR-PF/
+
+### 2. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Set up environment (optional)
+Create a `.env` file in the root directory:
+NSRDB_API_KEY=your_key_here
+
+> ⚠️ Not required — the pipeline uses PVGIS by default (no API key needed). Only add this if you want to experiment with NSRDB in the future.
+
+### 4. Run the full pipeline
+```bash
+python pipeline.py
+```
+
+This runs all 5 agents in sequence (~3-5 minutes). It will:
+- Fetch 5 years of real hourly solar data from PVGIS
+- Engineer physics-informed features
+- Train and evaluate the XGBoost model
+- Generate a 4-week future forecast
+- Build the interactive dashboard
+
+### 5. Launch the dashboard
+
+**Windows:**
+```bash
+python -m streamlit run dashboard/app.py
+```
+
+**Mac/Linux:**
+```bash
+streamlit run dashboard/app.py
+```
+
+Open your browser at: `http://localhost:8501`
+
+### 6. Resume from a specific stage
+If the pipeline fails at any stage, resume from where it stopped:
+```bash
+python pipeline.py features     # skip data fetching
+python pipeline.py modeling     # skip data + features
+python pipeline.py evaluation   # only re-evaluate
+python pipeline.py dashboard    # only rebuild dashboard
+```
+
+---
+
+## 📁 Project Structure
+
+SOLAR-PAMPA/
+├── agents/
+│   ├── init.py              # BaseAgent abstract class
+│   ├── data_agent.py            # PVGIS ERA5 data fetching
+│   ├── feature_agent.py         # Solar geometry + feature engineering
+│   ├── modeling_agent.py        # XGBoost model + future forecast
+│   ├── evaluation_agent.py      # Metrics (MAE, RMSE, MAPE, R²) + plots
+│   └── dashboard_agent.py       # Streamlit app generator
 ├── data/
-│   ├── raw/
-│   │   └── la_pampa_weather_data/                     # Raw downloaded NREL/API data
-│   └── processed/
-│       └── cleaned_solar_data.csv                     # Cleaned and processed data
-├── notebooks/
-│   ├── 01_data_acquisition_eda.ipynb
-│   ├── 02_feature_engineering_time_series.ipynb
-│   ├── 03_forecasting_model_development.ipynb
-│   └── 04_forecast_evaluation.ipynb
-├── src/
-│   ├── features.py                                    # Functions for feature engineering (e.g., solar geometry)
-│   ├── models.py                                      # Functions for forecasting models
-│   └── utils.py                                       # Utility functions
+│   ├── raw/                     # Raw downloaded data
+│   └── processed/               # Parquet files passed between agents
+├── models/                      # Trained model, predictions, future forecast
 ├── reports/
-│   ├── figures/                                       # Visualizations
-│   └── results_presentation.pdf                       # Short presentation of results
-├── dashboard/ (Optional)
-│   ├── app.py                                         # Streamlit/Dash application
-├── README.md
-├── requirements.txt                                   # Python dependencies
+│   └── figures/                 # Generated diagnostic plots
+├── dashboard/
+│   └── app.py                   # Streamlit interactive dashboard
+├── pipeline.py                  # Main orchestrator — run this
+├── config.py                    # All constants, paths, and settings
+├── requirements.txt             # Python dependencies
+├── .env                         # API keys (never commit this)
 └── .gitignore
-```
 
-### How to Run the Project
+---
 
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/your-username/SOLAR-PF.git](https://github.com/your-username/SOLAR-PF.git)
-    cd SOLAR-PF
-    ```
-2.  **Create a virtual environment and install dependencies:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate   # On Windows: venv\Scripts\activate
-    pip install -r requirements.txt
-    ```
-3.  **Download the dataset:** Acquire data from NREL or your chosen weather API and place it in the `data/raw/la_pampa_weather_data/` directory. (If using an API, integrate the data fetching directly into your `01_data_acquisition_eda.ipynb` notebook).
-4.  **Run Jupyter Notebooks:** Navigate to the `notebooks/` directory and open them in sequence to see the analysis and modeling process.
-    ```bash
-    jupyter notebook
-    ```
-5.  **Run Dashboard (if implemented):**
-    ```bash
-    cd dashboard
-    streamlit run app.py # Or python app.py for Dash
-    ```
+## 🌐 Data Source
 
-### Potential Applications of Forecast (Why it matters)
+| | Details |
+|-|---------|
+| **Source** | PVGIS ERA5 (EU Commission Joint Research Centre) |
+| **Coverage** | Full South America ✅ |
+| **Years** | 2018–2022 |
+| **Resolution** | Hourly → aggregated to weekly |
+| **Variables** | GHI, DNI, DHI, air temperature, wind speed |
+| **API key required** | No — completely free |
+| **URL** | https://re.jrc.ec.europa.eu/pvg_tools/ |
+| **pvlib function** | `pvlib.iotools.get_pvgis_hourly()` |
 
-* **Grid Stability:** Accurate forecasts help grid operators anticipate fluctuations in solar supply, enabling better management of conventional power plants or energy storage systems to maintain grid balance.
-* **Energy Market Bidding:** Solar farm operators can use forecasts to make more informed bids in electricity markets, optimizing revenue and avoiding penalties for inaccurate supply predictions.
-* **Infrastructure Planning:** Long-term forecasts can inform decisions about where to build new solar farms or invest in transmission infrastructure.
-* **Resource Management:** For remote, off-grid systems, knowing future solar availability is crucial for managing battery storage and ensuring continuous power supply.
-* **Hydropower Coordination:** In regions with mixed energy sources, solar forecasts can help optimize the dispatch of hydropower, saving water when solar is abundant.
+### ⚠️ Why PVGIS instead of NSRDB?
 
-### Future Work & Improvements
+The original design used NREL's NSRDB API. During implementation we discovered:
+- `psm3-download` endpoint: **deprecated** (replaced by v3.2.2)
+- `psm3-2-2-download` endpoint: returns **404 for South America**
+- `PSM4 (get_nsrdb_psm4_aggregated)`: **CONUS only**, no Argentina coverage
+- NREL domain migrating from `developer.nrel.gov` → `developer.nlr.gov` by April 30, 2026
 
-* Incorporate satellite imagery for more granular cloud cover analysis.
-* Explore deep learning models (e.g., CNN-LSTMs) for spatio-temporal forecasting if multiple solar farms are considered.
-* Integrate real-time data streams for near-real-time forecasting.
-* Develop probabilistic forecasts to quantify uncertainty more rigorously.
-* Compare the economic benefits of improved forecasts.
+**Solution:** PVGIS ERA5 provides equivalent quality data with full South America coverage and no API key required.
+
+> If NSRDB access is needed in the future: register at https://developer.nrel.gov/signup/ and store the key in `.env` as `NSRDB_API_KEY`.
+
+---
+
+## 🔬 Features Engineered
+
+| Feature | Description | Source |
+|---------|-------------|--------|
+| `solar_elevation` | Sun angle above horizon | pvlib |
+| `solar_azimuth` | Sun compass direction | pvlib |
+| `cos_zenith` | Cosine of solar zenith angle | pvlib |
+| `ghi_clear_sky` | Theoretical clear-sky GHI | pvlib |
+| `clear_sky_index` | GHI / GHI_clearsky (cloud proxy) | Derived |
+| `cloud_fraction` | Cloud cover fraction 0–1 | Derived |
+| `month_sin/cos` | Cyclical month encoding | Derived |
+| `doy_sin/cos` | Cyclical day-of-year encoding | Derived |
+| `ghi_lag_1/2/4/8/52w` | Lagged weekly GHI values | Derived |
+| `ghi_roll_4/12w` | Rolling mean GHI | Derived |
+
+---
+
+## 🤖 Model Details
+
+- **Algorithm:** XGBoost Regressor
+- **Validation:** TimeSeriesSplit (5 folds) — data is never shuffled
+- **Train/Test split:** 80% train / 20% test (strictly chronological)
+- **Uncertainty:** ±1.96 × residual std → 95% confidence intervals
+- **Future forecast:** 4 weeks ahead using learned seasonal patterns
+- **Outlier removal:** IQR method (3× IQR threshold)
+- **Partial week removal:** First and last weeks of dataset excluded
+
+---
+
+## 🛠️ Tech Stack
+
+| Tool | Purpose |
+|------|---------|
+| `pvlib` | Solar geometry and clear-sky calculations |
+| `xgboost` | Time series forecasting model |
+| `pandas` / `pyarrow` | Data processing and Parquet I/O |
+| `scikit-learn` | Preprocessing, cross-validation |
+| `streamlit` | Interactive web dashboard |
+| `plotly` | Interactive charts |
+| `matplotlib` / `seaborn` | Static diagnostic plots |
+| `python-dotenv` | Environment variable management |
+
+---
+
+## 💡 Why This Matters — Real Applications
+
+- **Grid Stability:** Accurate forecasts help grid operators anticipate fluctuations in solar supply, enabling better management of conventional power plants or energy storage to maintain grid balance.
+- **Energy Market Bidding:** Solar farm operators can use forecasts to make informed bids in electricity markets, optimizing revenue and avoiding penalties for inaccurate supply predictions.
+- **Infrastructure Planning:** Long-term forecasts inform decisions about where to build new solar farms or invest in transmission infrastructure.
+- **Hydropower Coordination:** In regions with mixed energy sources, solar forecasts help optimize hydropower dispatch — saving water when solar is abundant.
+- **Resource Management:** For remote off-grid systems, knowing future solar availability is crucial for managing battery storage and ensuring continuous power supply.
+
+---
+
+## 🔮 Future Work
+
+- [ ] Add 2023 data when PVGIS releases it
+- [ ] Deploy to Streamlit Cloud (public URL)
+- [ ] Improve confidence intervals using conformal prediction
+- [ ] Add Prophet / LSTM model comparison
+- [ ] Extend to multiple locations across La Pampa province
+- [ ] Incorporate satellite cloud imagery for finer resolution
+- [ ] Connect to real-time data streams for near-real-time forecasting
+- [ ] Develop probabilistic forecasts for grid operators
+
+---
+
+## 👤 Target Audience
+
+This project is tailored for **Energy Sector Professionals, Academia** (atmospheric physics, renewable energy research), and **Government Agencies** involved in energy policy and grid management in Argentina and similar regions. It showcases advanced time-series forecasting, real environmental data integration, physics-informed engineering, and a direct application to a pressing challenge in renewable energy.
+
+---
+
+*SOLAR-PAMPA | Solar Output Logistics & Atmospheric Response Prediction for La Pampa, Argentina*

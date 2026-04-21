@@ -39,9 +39,18 @@ class DashboardAgent(BaseAgent):
 
     def run(self) -> bool:
         self.logger.info("Writing Streamlit dashboard...")
-        self._write_app()
-        self.logger.info(f"Dashboard written to: {self.app_file}")
-        self.logger.info("Run with: streamlit run dashboard/app.py")
+        # Only write app.py if it doesn't exist
+        # This preserves manual edits after first run
+        if self.app_file.exists():
+            self.logger.info(
+                f"app.py already exists — skipping overwrite. "
+                f"Delete dashboard/app.py to regenerate."
+            )
+        else:
+            self._write_app()
+            self.logger.info(f"Dashboard written to: {self.app_file}")
+    
+        self.logger.info("Run with: python -m streamlit run dashboard/app.py")
         return True
 
     # ------------------------------------------------------------------

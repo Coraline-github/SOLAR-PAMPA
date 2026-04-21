@@ -39,6 +39,9 @@ class ModelingAgent(BaseAgent):
         self.logger.info("Loading features...")
         df = pd.read_parquet(self.input_file)
 
+        self.logger.info("Removing partial weeks...")
+        df = self._remove_partial_weeks(df)
+
         self.logger.info("Removing outliers...")
         df = self._remove_outliers(df)
 
@@ -55,6 +58,9 @@ class ModelingAgent(BaseAgent):
 
         self.logger.info("Saving model and predictions...")
         self._save_artifacts(model, scaler, predictions)
+
+        self.logger.info("Generating future forecast...")
+        self._generate_future_forecast(model, scaler, df)
 
         return True
 
@@ -225,3 +231,102 @@ class ModelingAgent(BaseAgent):
             self.logger.info("No outliers found")
 
         return df
+    
+    # ------------------------------------------------------------------
+    # Filter Partial Weeks
+    # ------------------------------------------------------------------
+    def _remove_partial_weeks(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Remove partial weeks at start/end of dataset.
+        A full week has 7 days. Partial weeks skew the model.
+        """
+        df["week_start"] = pd.to_datetime(df["week_start"])
+        df["week_end"]   = df["week_start"] + pd.Timedelta(days=6)
+
+        # Remove last week if it ends after the last full week
+        last_date = df["week_start"].max()
+        df = df[df["week_start"] < last_date].copy()
+
+        # Remove first week too — often partial
+        first_date = df["week_start"].min()
+        df = df[df["week_start"] > first_date].copy()
+
+        df = df.drop(columns=["week_end"], errors="ignore")
+        self.logger.info(f"After removing partial weeks: {len(df)} weeks")
+        return df
+    
+    # ------------------------------------------------------------------
+    # Future Forecast
+    # ------------------------------------------------------------------
+    def _generate_future_forecast(self, model, scaler, df: pd.DataFrame):
+        """
+        Generate 4-week ahead forecast beyond the training data.
+        Uses last known week's features + seasonal patterns.
+        Outputs: models/future_forecast.parquet
+        """
+        from config import FORECAST_HORIZON_WEEKS
+        import pvlib
+
+        self.logger.info(f"Generating {FORECAST_HORIZON_WEEKS}-week future forecast...")
+
+        # Get last known date
+        last_week  = pd.to_datetime(df["week_start"].max())
+        future_weeks = [
+            last_week + pd.Timedelta(weeks=i+1)
+            for i in range(FORECAST_HORIZON_WEEKS)
+        ]
+
+        # Use last row as base, update time features for each future week
+        base_row = df.iloc[-1].copy()
+        future_rows = []
+
+        for week in future_weeks:
+            row = base_row.copy()
+
+            # Update time-based features
+            doy = week.day_of_year
+            month = week.month
+
+            row["month_sin"] = np.sin(2 * np.pi * month / 12)
+            row["month_cos"] = np.cos(2 * np.pi * month / 12)
+            row["doy_sin"]   = np.sin(2 * np.pi * doy / 365)
+            row["doy_cos"]   = np.cos(2 * np.pi * doy / 365)
+            row["year"]      = week.year
+
+            # Shift lag features forward
+            row["ghi_lag_1w"] = base_row[self.TARGET_COLUMN] \
+                if hasattr(self, "TARGET_COLUMN") \
+                else base_row.get("ghi_lag_1w", base_row["ghi_lag_2w"])
+
+            future_rows.append(row)
+
+        future_df = pd.DataFrame(future_rows)
+
+        # Get feature columns (same as training)
+        feature_cols = self.feature_names
+        X_future     = future_df[feature_cols].values
+        X_scaled     = scaler.transform(X_future)
+        y_future     = model.predict(X_scaled)
+
+        # Uncertainty from training residuals
+        train_preds  = model.predict(
+            scaler.transform(
+                df[feature_cols].values
+            )
+        )
+        residual_std = np.std(df[TARGET_COLUMN].values - train_preds)
+
+        future_forecast = pd.DataFrame({
+            "week_start"  : future_weeks,
+            "predicted"   : y_future.round(3),
+            "lower_bound" : (y_future - 1.96 * residual_std).round(3),
+            "upper_bound" : (y_future + 1.96 * residual_std).round(3),
+            "is_future"   : True,
+        })
+
+        output = self.output_path / "future_forecast.parquet"
+        future_forecast.to_parquet(output, index=False)
+        self.logger.info(f"Future forecast saved: {output}")
+        self.logger.info(f"\n{future_forecast[['week_start','predicted','lower_bound','upper_bound']].to_string()}")
+
+        return future_forecast
