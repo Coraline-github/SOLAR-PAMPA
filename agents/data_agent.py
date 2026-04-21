@@ -3,11 +3,17 @@
 # Falls back to synthetic data if no API key is available
 # Outputs: data/processed/solar_raw_validated.parquet
 
+from unittest import result
+from unittest import result
+from urllib import response
+
 import pandas as pd
 import numpy as np
 import requests
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, time
+
+from xgboost import data
 from agents import BaseAgent
 from config import (
     LATITUDE, LONGITUDE, START_DATE, END_DATE,
@@ -51,56 +57,123 @@ class DataAgent(BaseAgent):
         return True
 
     # ------------------------------------------------------------------
-    # NSRDB Fetch
+    # PVGIS Fetch
     # ------------------------------------------------------------------
     def _fetch_nsrdb(self) -> pd.DataFrame:
-        """Fetch hourly solar data from NSRDB API."""
-        base_url = "https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-download.csv"
-        params = {
-            "api_key"   : NSRDB_API_KEY,
-            "lat"       : LATITUDE,
-            "lon"       : LONGITUDE,
-            "year"      : "2022",
-            "interval"  : "60",
-            "attributes": "ghi,dni,dhi,air_temperature,wind_speed,cloud_type",
-            "name"      : "SOLAR-PAMPA",
-            "email"     : "user@solarpampa.com",
-            "utc"       : "false",
-        }
-        try:
-            self.logger.info(f"Requesting NSRDB data for lat={LATITUDE}, lon={LONGITUDE}...")
-            response = requests.get(base_url, params=params, timeout=60)
-            response.raise_for_status()
+        """Route to PVGIS for South America coverage."""
+        self.logger.info("Using PVGIS (ERA5) — covers La Pampa, Argentina")
+        return self._fetch_pvgis()
 
-            from io import StringIO
-            # NSRDB CSV has 2 header rows — skip them
-            df = pd.read_csv(StringIO(response.text), skiprows=2)
-            df = self._parse_nsrdb_columns(df)
-            return df
+    def _fetch_pvgis(self) -> pd.DataFrame:
+        """
+        Fetch hourly solar data from PVGIS (EU Commission).
+        Covers South America. Free, no API key needed.
+        Fetches multiple years and combines them.
+        """
+        import pvlib.iotools
+        import time
 
-        except Exception as e:
-            self.logger.error(f"NSRDB fetch failed: {e}")
-            self.logger.warning("Falling back to synthetic data...")
+        years  = [2018, 2019, 2020, 2021, 2022]
+        frames = []
+
+        for year in years:
+            self.logger.info(f"Fetching PVGIS data for year {year}...")
+            try:
+                result = pvlib.iotools.get_pvgis_hourly(
+                    latitude       = LATITUDE,
+                    longitude      = LONGITUDE,
+                    start          = year,
+                    end            = year,
+                    raddatabase    = "PVGIS-ERA5",
+                    components     = True,
+                    surface_tilt   = 0,
+                    surface_azimuth= 0,
+                    outputformat   = "json",
+                    usehorizon     = True,
+                    pvcalculation  = False,
+                    map_variables  = False,
+                )
+
+                # Handle tuple unpacking
+                if isinstance(result, tuple):
+                    data = result[0]
+                else:
+                    data = result
+
+                # Print columns once for debugging
+                if year == 2022:
+                    self.logger.info(f"PVGIS raw columns: {data.columns.tolist()}")
+
+                # Fix: reset index to get timestamp as column
+                data = data.copy()
+                data.index.name = "timestamp"
+                data = data.reset_index()
+
+                # Fix: convert timezone-aware timestamp to naive
+                data["timestamp"] = pd.to_datetime(
+                    data["timestamp"]).dt.tz_localize(None)
+
+                # PVGIS horizontal surface components:
+                # Gb(i) = beam irradiance = DNI proxy
+                # Gd(i) = diffuse irradiance = DHI proxy  
+                # Gr(i) = reflected = ground diffuse
+                # GHI = beam + diffuse on horizontal surface
+                data = data.rename(columns={
+                    "Gb(i)"  : "dni",
+                    "Gd(i)"  : "dhi",
+                    "T2m"    : "temp_air",
+                    "WS10m"  : "wind_speed",
+                })
+
+                # Calculate GHI = DNI + DHI (on horizontal surface)
+                if "ghi" not in data.columns:
+                    if "dni" in data.columns and "dhi" in data.columns:
+                        data["ghi"] = data["dni"] + data["dhi"]
+                    elif "poa_direct" in data.columns:
+                        data["ghi"] = (data["poa_direct"] +
+                                       data.get("poa_sky_diffuse", 0) +
+                                       data.get("poa_ground_diffuse", 0))
+
+                # Add cloud_type placeholder
+                data["cloud_type"] = 0  
+
+                keep = ["timestamp", "ghi", "dni", "dhi",
+                        "temp_air", "wind_speed", "cloud_type"]
+                data = data[[c for c in keep if c in data.columns]]
+                frames.append(data)
+                self.logger.info(f"  ✓ {year}: {len(data)} rows")              
+
+            except Exception as e:
+                import traceback
+                self.logger.error(f"  ✗ {year} failed: {e}")
+                traceback.print_exc()
+
+        if not frames:
+            self.logger.error("All PVGIS fetches failed — using synthetic data")
             return self._generate_synthetic_data()
 
-    def _parse_nsrdb_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Parse NSRDB raw CSV into standard schema."""
-        df["timestamp"] = pd.to_datetime(
-            df[["Year", "Month", "Day", "Hour", "Minute"]]
-            .rename(columns={"Year":"year","Month":"month",
-                              "Day":"day","Hour":"hour","Minute":"minute"})
-        )
-        rename_map = {
-            "GHI"            : "ghi",
-            "DNI"            : "dni",
-            "DHI"            : "dhi",
-            "Temperature"    : "temp_air",
-            "Wind Speed"     : "wind_speed",
-            "Cloud Type"     : "cloud_type",
-        }
-        df = df.rename(columns=rename_map)
-        return df[["timestamp", "ghi", "dni", "dhi",
-                   "temp_air", "wind_speed", "cloud_type"]]
+        df = pd.concat(frames, ignore_index=True)
+        self.logger.info(f"Combined: {len(df)} rows across {len(frames)} years")
+        return df
+
+    #def _parse_nsrdb_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+    #    """Parse NSRDB raw CSV into standard schema."""
+    #    df["timestamp"] = pd.to_datetime(
+    #        df[["Year", "Month", "Day", "Hour", "Minute"]]
+    #        .rename(columns={"Year":"year","Month":"month",
+    #                          "Day":"day","Hour":"hour","Minute":"minute"})
+    #    )
+    #    rename_map = {
+    #        "GHI"            : "ghi",
+    #        "DNI"            : "dni",
+    #        "DHI"            : "dhi",
+    #        "Temperature"    : "temp_air",
+    #        "Wind Speed"     : "wind_speed",
+    #        "Cloud Type"     : "cloud_type",
+    #    }
+    #    df = df.rename(columns=rename_map)
+    #    return df[["timestamp", "ghi", "dni", "dhi",
+    #               "temp_air", "wind_speed", "cloud_type"]]
 
     # ------------------------------------------------------------------
     # Synthetic Data (for development without API key)

@@ -91,7 +91,8 @@ class FeatureAgent(BaseAgent):
             tz        = TIMEZONE
         )
 
-        clear_sky = location.get_clearsky(df["timestamp"])
+        times     = pd.DatetimeIndex(df["timestamp"])
+        clear_sky = location.get_clearsky(times)
         ghi_clear = clear_sky["ghi"].values
 
         # Avoid division by zero during nighttime

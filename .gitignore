@@ -1,0 +1,26 @@
+# Environment
+.env
+*.env
+
+# Data (too large for git)
+data/raw/
+data/processed/
+
+# Models (too large for git)
+models/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+
+# VS Code
+.vscode/
+
+# Reports (generated automatically)
+reports/figures/
+
+# Streamlit
+.streamlit/

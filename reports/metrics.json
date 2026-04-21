@@ -1,0 +1,8 @@
+{
+  "mae": 0.5312,
+  "rmse": 1.2146,
+  "mape_pct": 1.54,
+  "r2": 0.9939,
+  "ci_coverage_pct": 9.52,
+  "n_test_weeks": 42
+}

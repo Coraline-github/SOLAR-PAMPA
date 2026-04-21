@@ -39,6 +39,9 @@ class ModelingAgent(BaseAgent):
         self.logger.info("Loading features...")
         df = pd.read_parquet(self.input_file)
 
+        self.logger.info("Removing outliers...")
+        df = self._remove_outliers(df)
+
         self.logger.info(f"Dataset: {len(df)} weeks, target: {TARGET_COLUMN}")
 
         X, y          = self._prepare_features(df)
@@ -193,3 +196,32 @@ class ModelingAgent(BaseAgent):
 
         self.logger.info(f"Model saved     : {self.model_file}")
         self.logger.info(f"Predictions saved: {self.predictions_file}")
+
+    # ------------------------------------------------------------------
+    # Remove outliers
+    # ------------------------------------------------------------------
+    def _remove_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Remove extreme outlier weeks before training.
+        Uses IQR method on the target column.
+        """
+        Q1  = df[TARGET_COLUMN].quantile(0.25)
+        Q3  = df[TARGET_COLUMN].quantile(0.75)
+        IQR = Q3 - Q1
+
+        lower = Q1 - 3.0 * IQR
+        upper = Q3 + 3.0 * IQR
+
+        before = len(df)
+        df     = df[
+            (df[TARGET_COLUMN] >= lower) &
+            (df[TARGET_COLUMN] <= upper)
+        ].reset_index(drop=True)
+
+        removed = before - len(df)
+        if removed > 0:
+            self.logger.info(f"Removed {removed} outlier weeks")
+        else:
+            self.logger.info("No outliers found")
+
+        return df

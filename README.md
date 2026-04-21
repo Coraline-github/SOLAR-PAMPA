@@ -50,6 +50,27 @@ Given the specific focus on La Pampa, Argentina, acquiring precise historical so
     * **Source:** Potentially contact local universities (e.g., Universidad Nacional de La Pampa), CONICET, or regional meteorological services in Argentina. They might have publicly available datasets or be willing to share for academic projects.
     * **Why it's ideal:** Provides the most accurate and localized data, if accessible. This would demonstrate initiative and real-world data sourcing skills.
 
+## ⚠️ Data Source Notes
+
+### Why PVGIS instead of NSRDB?
+The original design used NREL's NSRDB API. During implementation we found:
+- `psm3-download` endpoint: **deprecated** (replaced by v3.2.2)
+- `psm3-2-2-download` endpoint: returns 404 for South America
+- `PSM4 (get_nsrdb_psm4_aggregated)`: **CONUS only**, no coverage for Argentina
+
+**Solution:** Switched to [PVGIS (EU Commission)](https://re.jrc.ec.europa.eu/pvg_tools/)
+- Uses ERA5 reanalysis data
+- Full South America coverage ✅
+- Free, no API key required ✅
+- Accessed via `pvlib.iotools.get_pvgis_hourly()`
+- Data range: 2005–2022
+
+### If NSRDB access is needed in future:
+- Register at https://developer.nrel.gov/signup/
+- Store key in `.env` as `NSRDB_API_KEY`
+- Note: domain migrating from `developer.nrel.gov` 
+  to `developer.nlr.gov` by April 30, 2026
+
 ### Expected Outcomes & Deliverables
 
 * **Jupyter Notebooks:** Comprehensive documentation of data collection, preprocessing, feature engineering, modeling, and evaluation.
