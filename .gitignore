@@ -1,6 +1,9 @@
 # Environment
 .env
 *.env
+.venv/
+venv/
+env/
 
 # Data (too large for git)
 data/raw/
